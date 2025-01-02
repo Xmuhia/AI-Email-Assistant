@@ -17,12 +17,14 @@ import {
     Modal,
     ModalHeader,
     ModalBody,
-    Form
+    Form,
+    Spinner
 } from "reactstrap";
 
 import InboxSidebar from "./Sidebar";
 import Breadcrumbs from "../../components/Common/Breadcrumb";
 import { emailCategories } from './mockEmails';
+import { AiFunction } from './AI';
 
 const ReadEmail = () => {
     document.title = "Read Email | Email Client";
@@ -47,6 +49,7 @@ const ReadEmail = () => {
     const [generatedResponse, setGeneratedResponse] = useState('');
     const [subject, setSubject] = useState(`Re: ${emailData.subject}`);
     const [editorState, setEditorState] = useState(EditorState.createEmpty());
+    const [btnLoading, setbtnLoading] = useState(false)
 
     // Response tones configuration
     const responseTones = {
@@ -56,66 +59,48 @@ const ReadEmail = () => {
         formal: { label: 'Formal', badge: 'primary' }
     };
 
-    const generateAIResponse = (tone) => {
-        const mockResponses = {
-            friendly: `Hey ${emailData.from.split(' ')[0]}!
-
-Thank you for your email! I've read through your message and appreciate you taking the time to share this information.
-
-${emailData.subject.includes('question') ? "I'd be happy to help answer your questions." : "I'll be sure to look into this right away."}
-
-Best wishes,
-[Your Name]`,
-
-            casual: `Hi ${emailData.from.split(' ')[0]},
-
-Thanks for reaching out! Got your email about "${emailData.subject}" and I'm on it.
-
-I'll get back to you with more details soon.
-
-Cheers,
-[Your Name]`,
-
-            humor: `Hey ${emailData.from.split(' ')[0]}! 👋
-
-Thanks for dropping this in my inbox! Perfect timing - I was just thinking my inbox needed more awesome emails like this.
-
-I'll dive right in and get back to you before my coffee gets cold ☕
-
-Stay awesome,
-[Your Name]`,
-
-            formal: `Dear ${emailData.from},
-
-Thank you for your email regarding "${emailData.subject}". I appreciate you bringing this matter to my attention.
-
-I will review the details thoroughly and provide a comprehensive response shortly.
-
-Best regards,
-[Your Name]`
-        };
-        return mockResponses[tone];
-    };
-
-    const handleGenerateResponse = (tone) => {
+    const handleGenerateResponse = async (tone) => {
+        try
+        { if (btnLoading)
+            return
+        setbtnLoading(true)
+        setEditorState(EditorState.createEmpty())
         setSelectedTone(tone);
-        const response = generateAIResponse(tone);
-        setGeneratedResponse(response);
+        const result = await AiFunction(emailData, tone)
+        setbtnLoading(false)
         
-        // Update editor content with generated response
-        const contentState = ContentState.createFromText(response);
+  
+        const contentState = ContentState.createFromText(result);
         const newEditorState = EditorState.createWithContent(contentState);
         setEditorState(newEditorState);
+    }
+    catch(error)
+    {
+     console.log(error)
+     setbtnLoading(false)
+
+    }
     };
 
-    const handleRegenerateResponse = () => {
-        const response = generateAIResponse(selectedTone);
-        setGeneratedResponse(response);
+    const handleRegenerateResponse = async() => {
+       try
+       { if (btnLoading)
+            return
+        setbtnLoading(true)
+        setEditorState(EditorState.createEmpty())
+        const result = await AiFunction(emailData, selectedTone)
+        setbtnLoading(false)
         
-        // Update editor content
-        const contentState = ContentState.createFromText(response);
+        const contentState = ContentState.createFromText(result);
         const newEditorState = EditorState.createWithContent(contentState);
         setEditorState(newEditorState);
+       }
+       catch(error)
+       {
+        console.log(error)
+        setbtnLoading(false)
+
+       }
     };
 
     const onEditorStateChange = (newState) => {
@@ -257,20 +242,26 @@ Best regards,
                         <h5 className="mb-3">Select Response Tone:</h5>
                         <div className="btn-group">
                             {Object.entries(responseTones).map(([key, value]) => (
-                                <Button
+                              <>{<Button
                                     key={key}
                                     color={selectedTone === key ? value.badge : 'light'}
                                     onClick={() => handleGenerateResponse(key)}
                                     className="me-2"
                                 >
                                     {value.label}
-                                </Button>
+                                </Button>}</>  
                             ))}
                         </div>
                     </div>
+        {btnLoading && (
+            <div className="text-center mt-3">
+                <Spinner color="primary" /> 
+                <p>Generating response...</p>
+            </div>
+        )}
 
                     {/* Email Compose Section */}
-                    <div className="mt-4">
+                    <div className="mt-3">
                         <Card className="mb-0">
                             <CardBody>
                                 <div className="mb-3">
